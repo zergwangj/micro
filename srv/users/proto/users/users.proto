@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package zergwangj.srv.users;
+
+import "google/api/annotations.proto";
+import "google/protobuf/empty.proto";
+
+service Users {
+	rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
+        option (google.api.http) = {
+            get: "/v1/users"
+        };
+	}
+	rpc GetUser(UserId) returns (UserInfo) {
+        option (google.api.http) = {
+            get: "/v1/users/{id}"
+        };
+	}
+	rpc GetUserByName(UserName) returns (UserInfo) {
+        option (google.api.http) = {
+            get: "/v1/users/name/{username}"
+        };
+	}
+	rpc CreateUser(UserInfo) returns (UserInfo) {
+        option (google.api.http) = {
+            post: "/v1/users"
+            body: "*"
+        };
+	}
+	rpc DeleteUser(UserId) returns (google.protobuf.Empty) {
+        option (google.api.http) = {
+            delete: "/v1/users/{id}"
+        };
+	}
+	rpc UpdateUser(UserInfo) returns (UserInfo) {
+        option (google.api.http) = {
+            put: "/v1/users"
+            body: "*"
+        };
+	}
+}
+
+message UserId {
+	int64 id = 1;
+}
+
+message UserName {
+	string username = 1;
+}
+
+message UserInfo {
+	int64 id = 1;
+	string username = 2;
+	string password = 3;
+}
+
+message ListUsersRequest {
+    int64 page = 1;
+    int64 pageSize = 2;
+}
+
+message ListUsersResponse {
+    repeated UserInfo users = 1;
+}
+

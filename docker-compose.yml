@@ -1,0 +1,165 @@
+version: "3"
+services:
+  nginx:
+    image: nginx
+    volumes:
+      - C:/Users/jim/data/nginx/nginx.conf:/etc/nginx/nginx.conf
+    restart: always
+    ports:
+      - 8080:80
+    networks:
+      - app_net
+
+  mysql:
+    image: mysql:5.7.22
+    volumes:
+      - C:/Users/jim/data/mysql:/var/lib/mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - 3306:3306
+    networks:
+      - app_net
+
+  consul:
+    image: consul
+    command: "agent -server -bind 0.0.0.0 -client 0.0.0.0 -bootstrap-expect=1 -disable-host-node-id"
+    ports:
+      - 8500:8500
+      - 8600:8600
+    networks:
+      - app_net
+
+  zipkin:
+    image: openzipkin/zipkin:2.9.4
+    # environment:
+      # - STORAGE_TYPE=mysql
+      # Point the zipkin at the storage backend
+      # - MYSQL_DB=zipkin
+      # - MYSQL_USER=root
+      # - MYSQL_PASS=root
+      # - MYSQL_HOST=mysql
+      # - MYSQL_TCP_PORT=3306
+      # Uncomment to enable scribe
+      # - SCRIBE_ENABLED=true
+      # Uncomment to enable self-tracing
+      # - SELF_TRACING_ENABLED=true
+      # Uncomment to enable debug logging
+      # - JAVA_OPTS=-Dlogging.level.zipkin=DEBUG -Dlogging.level.zipkin2=DEBUG
+    # ports:
+    #   - 9411:9411
+      # Uncomment if you set SCRIBE_ENABLED=true
+      # - 9410:9410
+    # depends_on:
+      # - mysql
+    networks: 
+      - app_net
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    networks: 
+      - app_net
+
+  kafka:
+    image: wurstmeister/kafka
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://:9092
+      KAFKA_LISTENERS: PLAINTEXT://:9092
+    restart: always
+    expose:
+      - 9092
+    depends_on:
+      - zookeeper
+    networks: 
+      - app_net
+
+  auth-srv:
+    image: zergwangj/auth-srv:latest
+    environment:
+      MICRO_SERVER_ADDRESS: auth-srv:5353
+      MICRO_REGISTRY_ADDRESS: consul:8500
+      KAFKA_ADDRESS: kafka:9092
+      ZIPKIN_ADDRESS: zipkin:9411
+      DB_ADDRESS: mysql:3306
+      DB_USER: root
+      DB_PASSWORD: root
+    restart: always
+    depends_on:
+      - mysql
+      - consul
+      - zipkin
+      - kafka
+    expose:
+      - 5353
+    networks: 
+      - app_net
+
+  auth-api:
+    image: zergwangj/auth-api:latest
+    environment:
+      MICRO_SERVER_ADDRESS: auth-api:5353
+      MICRO_REGISTRY_ADDRESS: consul:8500
+      RESTFUL_ADDRESS: auth-api:8080
+      ZIPKIN_ADDRESS: zipkin:9411
+      DB_ADDRESS: mysql:3306
+      DB_USER: root
+      DB_PASSWORD: root
+    restart: always
+    depends_on:
+      - consul
+      - zipkin
+      - auth-srv
+    expose:
+      - 5353
+      - 8080
+    networks:
+      - app_net
+
+  users-srv:
+    image: zergwangj/users-srv:latest
+    environment:
+      MICRO_SERVER_ADDRESS: users-srv:5353
+      MICRO_REGISTRY_ADDRESS: consul:8500
+      KAFKA_ADDRESS: kafka:9092
+      ZIPKIN_ADDRESS: zipkin:9411
+      DB_ADDRESS: mysql:3306
+      DB_USER: root
+      DB_PASSWORD: root
+    restart: always
+    depends_on:
+      - mysql
+      - consul
+      - zipkin
+      - kafka
+    expose:
+      - 5353
+    networks:
+      - app_net
+
+  users-api:
+    image: zergwangj/users-api:latest
+    environment:
+      MICRO_SERVER_ADDRESS: users-api:5353
+      MICRO_REGISTRY_ADDRESS: consul:8500
+      RESTFUL_ADDRESS: users-api:8080
+      ZIPKIN_ADDRESS: zipkin:9411
+      DB_ADDRESS: mysql:3306
+      DB_USER: root
+      DB_PASSWORD: root
+    restart: always
+    depends_on:
+      - consul
+      - zipkin
+      - users-srv
+    expose:
+      - 5353
+      - 8080
+    networks:
+      - app_net
+
+networks:
+  app_net:
+

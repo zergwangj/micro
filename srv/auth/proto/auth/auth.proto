@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package auth;
+
+import "google/api/annotations.proto";
+
+service Auth {
+    rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse) {
+        option (google.api.http) = {
+            post: "/v1/auth/sessions"
+            body: "*"
+        };
+    }
+    rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse) {
+        option (google.api.http) = {
+            get: "/v1/auth/sessions/{token}"
+        };
+    }
+    rpc DeleteSession(DeleteSessionRequest) returns (DeleteSessionResponse) {
+        option (google.api.http) = {
+            delete: "/v1/auth/sessions/{token}"
+        };
+    }
+}
+
+message CreateSessionRequest {
+    string username = 1;
+    string password = 2;
+}
+
+message CreateSessionResponse {
+    string token = 1;
+}
+
+message ValidateTokenRequest {
+    string token = 1;
+}
+
+message ValidateTokenResponse {
+    bool valid = 1;
+    string error = 2;
+}
+
+message DeleteSessionRequest {
+    string username = 1;
+    string token = 2;
+}
+
+message DeleteSessionResponse {
+    bool ok = 1;
+}
